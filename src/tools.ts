@@ -1,4 +1,5 @@
-import { TTIMetric } from '../types';
+import { TTIMetric, Metric } from '../types';
+import { RATING } from './consts';
 
 /**
  * Performantly generate a unique, 30-char string by combining a version
@@ -16,7 +17,22 @@ export const initMetric = <MetricName extends TTIMetric['name']>(
 	return {
 		name,
 		value: typeof value === 'undefined' ? -1 : value,
-		rating: 'good', // If needed, will be updated when reported. `const` to keep the type from widening to `string`.
+		rating: getRating(0),
 		id: generateUniqueID()
 	};
+};
+
+/**
+ *
+ * @param value number
+ * @returns 'good' | 'needs-improvement' | 'poor'
+ */
+export const getRating = (value: number): Metric['rating'] => {
+	if (value > RATING.mobile.scoring.median) {
+		return 'poor';
+	}
+	if (value > RATING.mobile.scoring.p10) {
+		return 'needs-improvement';
+	}
+	return 'good';
 };

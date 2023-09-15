@@ -1,7 +1,7 @@
 import { TTIReportCallback, TTIMetric } from '../types';
 import { ENTRY_NAME_FCP, QUIET_WINDOW_DURATION, RATING } from './consts';
 import { log } from './debug';
-import { initMetric } from './tools';
+import { initMetric, getRating } from './tools';
 
 /**
  * Calculates the [TTI](https://web.dev/tti/) value for the current page and
@@ -46,6 +46,12 @@ export const onTTI = (onReport: TTIReportCallback) => {
 		entryTypes: ['paint', 'longtask', 'resource']
 	});
 
+	// There are some cases need to be handled.
+	// 1. There are no long tasks after fcp but there are network requests.
+	// 2. There are neither long tasks nor network requests after fcp
+	// In such case we need onload event to handle tti.
+	// 3. After fcp, there are both long tasks and network requests.
+	// 4. There are long tasks after fcp but no network requests.
 	const checkQuietWindow = () => {
 		// Filter longtasks after fcp.
 		const longTasksAfterFcp = longTasks.filter(
@@ -79,7 +85,7 @@ export const onTTI = (onReport: TTIReportCallback) => {
 			quietWindowStartTime = performance.now() - QUIET_WINDOW_DURATION;
 
 			// Count the number of network requests in 5 seconds.
-			const networksInTimer = networks.filter(
+			const networksInQuietWindow = networks.filter(
 				(network) =>
 					network.startTime >= quietWindowStartTime &&
           network.startTime <= quietWindowStartTime + QUIET_WINDOW_DURATION
@@ -87,7 +93,7 @@ export const onTTI = (onReport: TTIReportCallback) => {
 
 			// If the number of network requests is less than or equal to 2,
 			// find the nearest long task before the quiet window.
-			if (networksInTimer.length <= 2) {
+			if (networksInQuietWindow.length <= 2) {
 				const longTasksBeforeQuietWindow = longTasks.filter(
 					(longTask) =>
 						longTask.startTime + longTask.duration <= quietWindowStartTime &&
@@ -98,22 +104,18 @@ export const onTTI = (onReport: TTIReportCallback) => {
 				if (longTasksBeforeQuietWindow.length === 0) {
 					metric.value = fcpStartTime;
 				} else {
+					// Find the nearest long task before the quiet window, and
+					// its endTime is equal to TTI.
 					const lastLongTask =
             longTasksBeforeQuietWindow[longTasksBeforeQuietWindow.length - 1];
 					metric.value = lastLongTask.startTime + lastLongTask.duration;
 				}
 
-				if (
-					metric.value >= RATING.mobile.scoring.p10 &&
-          metric.value < RATING.mobile.scoring.median
-				) {
-					metric.rating = 'needs-improvement';
-				} else if (metric.value >= RATING.mobile.scoring.median) {
-					metric.rating = 'poor';
-				}
+				// Set the rating value based on the obtained tti time.
+				metric.rating = getRating(metric.value);
 
 				// Call the onReport callback if the quiet window was found.
-				// onReport(metric);
+				onReport(metric);
 
 				// After reporting disconnect the PerformanceObserver.
 				observer.disconnect();
