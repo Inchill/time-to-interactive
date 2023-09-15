@@ -1,16 +1,37 @@
 {
   "name": "time-to-interactive",
   "version": "1.0.0",
-  "description": "",
+  "description": "Easily measure performance metrics of time to interactive in JavaScript",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepare": "husky install",
+    "lint": "eslint \"*.js\" \"src/**/*.ts\" \"test/**/*.js\"",
+    "lint:fix": "eslint --fix \"*.js\" \"src/**/*.ts\" \"test/**/*.js\""
+  },
+  "engines": {
+    "node": "16.x"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Inchill",
+  "license": "MIT",
   "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^6.7.0",
+    "@typescript-eslint/parser": "^6.7.0",
+    "eslint": "^8.49.0",
+    "husky": "^8.0.3",
+    "lint-staged": "^14.0.1",
+    "prettier": "^3.0.3",
     "rollup": "^3.29.1",
     "typescript": "^5.2.2"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "pnpm run lint"
+    }
+  },
+  "lint-staged": {
+    "**/*.{js,ts}": "eslint --fix --ignore-path .gitignore",
+    "**/*.{cjs,css,html,js,json,html,md,ts,yml,yaml}": "prettier --write --ignore-path .gitignore"
   }
 }
