@@ -1,4 +1,4 @@
-import { TTIMetric, Metric } from '../types';
+import { TTIMetric, Metric } from '../types/index';
 import { RATING } from './consts';
 
 /**
@@ -35,4 +35,33 @@ export const getRating = (value: number): Metric['rating'] => {
 		return 'needs-improvement';
 	}
 	return 'good';
+};
+
+/**
+ * Check if is's Safari browser.
+ * @returns boolean
+ */
+export function isSafari(): boolean {
+	return (
+		/Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent)
+	);
+}
+
+/**
+ * Get the value of the specific search query key.
+ * @param name string
+ * @returns string
+ */
+export const getQueryString = (name = '') => {
+	if (typeof name !== 'string') {
+		throw new Error('Could not support a non string name.');
+	}
+
+	const queryStr = window.location.href.split('?')[1] || '';
+	const pairs = queryStr.split('&');
+	for (let i = 0; i < pairs.length; i++) {
+		const [key, value] = pairs[i].split('=') || ['', ''];
+		if (name === key) return value;
+	}
+	return undefined;
 };

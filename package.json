@@ -2,27 +2,54 @@
   "name": "time-to-interactive",
   "version": "1.0.0",
   "description": "Easily measure performance metrics of time to interactive in JavaScript",
-  "main": "index.js",
+  "main": "dist/index.umd.js",
+  "module": "dist/index.esm.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky install",
     "lint": "eslint \"*.js\" \"src/**/*.ts\" \"test/**/*.js\"",
-    "lint:fix": "eslint --fix \"*.js\" \"src/**/*.ts\" \"test/**/*.js\""
+    "lint:fix": "eslint --fix \"*.js\" \"src/**/*.ts\" \"test/**/*.js\"",
+    "build:esm": "rollup -c --environment NODE_ENV:esm",
+    "build:umd": "rollup -c --environment NODE_ENV:umd",
+    "build:min": "rollup -c --environment NODE_ENV:min",
+    "build": "rimraf dist/* && run-p build:esm build:umd build:min"
   },
   "engines": {
     "node": "16.x"
   },
-  "keywords": [],
+  "keywords": [
+    "performance",
+    "metrics",
+    "TTI"
+  ],
   "author": "Inchill",
   "license": "MIT",
+  "files": [
+    "dist/",
+    "package.json",
+    "README.md"
+  ],
   "devDependencies": {
+    "@babel/core": "^7.22.20",
+    "@babel/preset-env": "^7.22.20",
+    "@babel/preset-typescript": "^7.22.15",
+    "@rollup/plugin-babel": "^6.0.3",
+    "@rollup/plugin-json": "^6.0.0",
     "@typescript-eslint/eslint-plugin": "^6.7.0",
     "@typescript-eslint/parser": "^6.7.0",
     "eslint": "^8.49.0",
     "husky": "^8.0.3",
     "lint-staged": "^14.0.1",
+    "lodash.merge": "^4.6.2",
+    "npm-run-all": "^4.1.5",
     "prettier": "^3.0.3",
+    "rimraf": "^5.0.1",
     "rollup": "^3.29.1",
+    "rollup-plugin-node-resolve": "^5.2.0",
+    "rollup-plugin-typescript2": "^0.35.0",
+    "rollup-plugin-uglify": "^6.0.4",
     "typescript": "^5.2.2"
   },
   "husky": {

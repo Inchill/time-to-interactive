@@ -1,7 +1,7 @@
-import { TTIReportCallback, TTIMetric } from '../types';
+import { TTIReportCallback, TTIMetric } from '../types/index';
 import { ENTRY_NAME_FCP, QUIET_WINDOW_DURATION, RATING } from './consts';
 import { log } from './debug';
-import { initMetric, getRating } from './tools';
+import { initMetric, getRating, isSafari } from './tools';
 
 /**
  * Calculates the [TTI](https://web.dev/tti/) value for the current page and
@@ -10,11 +10,12 @@ import { initMetric, getRating } from './tools';
  * value is a `DOMHighResTimeStamp`.
  */
 export const onTTI = (onReport: TTIReportCallback) => {
+	if (isSafari()) return;
+
 	let fcpStartTime = 0;
 	let longTasks: TTIMetric['entry'][];
 	let networks: TTIMetric['entry'][];
 	let quietWindowTimer: number;
-	let quietWindowStartTime = 0;
 	const metric = initMetric('TTI');
 
 	const handleEntries = (entries: TTIMetric['entries']) => {
@@ -61,55 +62,38 @@ export const onTTI = (onReport: TTIReportCallback) => {
 		// If there are no longtasks after fcp, start the quiet window timer
 		// and count the number of network requests for at least 5 seconds.
 		if (longTasksAfterFcp.length === 0) {
-			startQuietWindowTimer();
+			startQuietWindowTimer(fcpStartTime);
 		} else {
 			// Get the last longtask.
 			const lastLongTask = longTasksAfterFcp[longTasksAfterFcp.length - 1];
 
-			// 最近的长任务结束后开启安静窗口检测
-			setTimeout(() => {
-				startQuietWindowTimer();
-			}, lastLongTask.startTime + lastLongTask.duration);
+			// Turn on quiet window detection using the latest long task end time as the start time.
+			startQuietWindowTimer(lastLongTask.startTime + lastLongTask.duration);
 		}
 	};
 
 	/**
-   * 启动安静窗口计时器
+   * Start quiet window detection timer.
    */
-	function startQuietWindowTimer() {
-		// Clear the last quiet window timer.
+	function startQuietWindowTimer(startTime: number) {
+		// Clear the last detection timer.
 		clearQuietWindowTimer();
 
 		quietWindowTimer = setTimeout(() => {
-			// Get the start time of quiet window.
-			quietWindowStartTime = performance.now() - QUIET_WINDOW_DURATION;
-
 			// Count the number of network requests in 5 seconds.
 			const networksInQuietWindow = networks.filter(
 				(network) =>
-					network.startTime >= quietWindowStartTime &&
-          network.startTime <= quietWindowStartTime + QUIET_WINDOW_DURATION
+					network.startTime >= startTime &&
+          network.startTime <= startTime + QUIET_WINDOW_DURATION
 			);
 
 			// If the number of network requests is less than or equal to 2,
 			// find the nearest long task before the quiet window.
 			if (networksInQuietWindow.length <= 2) {
-				const longTasksBeforeQuietWindow = longTasks.filter(
-					(longTask) =>
-						longTask.startTime + longTask.duration <= quietWindowStartTime &&
-            longTask.startTime >= fcpStartTime
-				);
-
 				// If no longtask is found, the value of TTI is equal to FCP.
-				if (longTasksBeforeQuietWindow.length === 0) {
-					metric.value = fcpStartTime;
-				} else {
-					// Find the nearest long task before the quiet window, and
-					// its endTime is equal to TTI.
-					const lastLongTask =
-            longTasksBeforeQuietWindow[longTasksBeforeQuietWindow.length - 1];
-					metric.value = lastLongTask.startTime + lastLongTask.duration;
-				}
+				// If find the nearest long task before the quiet window, and
+				// its endTime is equal to TTI.
+				metric.value = startTime;
 
 				// Set the rating value based on the obtained tti time.
 				metric.rating = getRating(metric.value);
@@ -124,7 +108,7 @@ export const onTTI = (onReport: TTIReportCallback) => {
 		}, QUIET_WINDOW_DURATION);
 	}
 
-	// 清除安静窗口计时器
+	// Clear timer.
 	function clearQuietWindowTimer() {
 		clearTimeout(quietWindowTimer);
 	}
