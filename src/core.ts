@@ -13,8 +13,8 @@ export const onTTI = (onReport: TTIReportCallback) => {
 	if (isSafari()) return;
 
 	let fcpStartTime = 0;
-	let longTasks: TTIMetric['entry'][];
-	let networks: TTIMetric['entry'][];
+	const longTasks: TTIMetric['entry'][] = [];
+	const networks: TTIMetric['entry'][] = [];
 	let quietWindowTimer: number;
 	const metric = initMetric('TTI');
 
@@ -45,6 +45,15 @@ export const onTTI = (onReport: TTIReportCallback) => {
 	const observer = new PerformanceObserver(handleEntries);
 	observer.observe({
 		entryTypes: ['paint', 'longtask', 'resource']
+	});
+
+	window.addEventListener('load', () => {
+		const resourceEntries = performance.getEntriesByType('resource');
+		if (resourceEntries.length === 0) {
+			console.log('页面没有资源加载事件');
+		} else {
+			console.log('页面有资源加载事件');
+		}
 	});
 
 	// There are some cases need to be handled.
@@ -79,7 +88,7 @@ export const onTTI = (onReport: TTIReportCallback) => {
 		// Clear the last detection timer.
 		clearQuietWindowTimer();
 
-		quietWindowTimer = setTimeout(() => {
+		quietWindowTimer = window.setTimeout(() => {
 			// Count the number of network requests in 5 seconds.
 			const networksInQuietWindow = networks.filter(
 				(network) =>

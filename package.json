@@ -1,20 +1,32 @@
 {
   "name": "time-to-interactive",
   "version": "1.0.0",
-  "description": "Easily measure performance metrics of time to interactive in JavaScript",
+  "description": "Easily measure performance metrics of time to interactive in JavaScript.",
   "main": "dist/index.umd.js",
   "module": "dist/index.esm.js",
-  "types": "dist/index.d.ts",
+  "types": "types/index.d.ts",
   "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.esm",
+      "require": "./dist/index.cjs",
+      "types": "./types/index.d.ts"
+    }
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "prepare": "husky install",
     "lint": "eslint \"*.js\" \"src/**/*.ts\" \"test/**/*.js\"",
     "lint:fix": "eslint --fix \"*.js\" \"src/**/*.ts\" \"test/**/*.js\"",
     "build:esm": "rollup -c --environment NODE_ENV:esm",
+    "build:cjs": "rollup -c --environment NODE_ENV:cjs",
     "build:umd": "rollup -c --environment NODE_ENV:umd",
     "build:min": "rollup -c --environment NODE_ENV:min",
-    "build": "rimraf dist/* && run-p build:esm build:umd build:min"
+    "build": "rimraf dist/* && run-p build:esm build:cjs build:umd build:min",
+    "release:major": "npm version major -m 'Release v%s' && npm publish",
+    "release:minor": "npm version minor -m 'Release v%s' && npm publish",
+    "release:patch": "npm version patch -m 'Release v%s' && npm publish",
+    "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s"
   },
   "engines": {
     "node": "16.x"
@@ -27,6 +39,7 @@
   "author": "Inchill",
   "license": "MIT",
   "files": [
+    "types",
     "dist/",
     "package.json",
     "README.md"
@@ -37,6 +50,7 @@
     "@babel/preset-typescript": "^7.22.15",
     "@rollup/plugin-babel": "^6.0.3",
     "@rollup/plugin-json": "^6.0.0",
+    "@rollup/plugin-terser": "^0.4.3",
     "@typescript-eslint/eslint-plugin": "^6.7.0",
     "@typescript-eslint/parser": "^6.7.0",
     "eslint": "^8.49.0",
@@ -49,7 +63,6 @@
     "rollup": "^3.29.1",
     "rollup-plugin-node-resolve": "^5.2.0",
     "rollup-plugin-typescript2": "^0.35.0",
-    "rollup-plugin-uglify": "^6.0.4",
     "typescript": "^5.2.2"
   },
   "husky": {

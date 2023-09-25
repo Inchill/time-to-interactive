@@ -5,7 +5,7 @@ import json from '@rollup/plugin-json';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'node:url';
 import { dirname } from 'node:path';
-import { uglify } from 'rollup-plugin-uglify';
+import terser from '@rollup/plugin-terser';
 import merge from 'lodash.merge';
 import path from 'path';
 const pkg = JSON.parse(
@@ -28,6 +28,12 @@ const jobs = {
 			file: pathResolve(pkg.module)
 		}
 	},
+	cjs: {
+		output: {
+			format: 'cjs',
+			file: pathResolve('dist/index.cjs.js')
+		}
+	},
 	umd: {
 		output: {
 			format: 'umd',
@@ -39,7 +45,12 @@ const jobs = {
 			format: 'umd',
 			file: pathResolve(pkg.main.replace(/(.\w+)$/, '.min$1'))
 		},
-		plugins: [uglify()]
+		plugins: [
+			terser({
+				compress: true,
+				mangle: true
+			})
+		]
 	}
 };
 
@@ -50,7 +61,7 @@ export default merge(
 		input: 'src/index.ts',
 		output: {
 			file: 'dist/tti.js',
-			format: 'es',
+			format: 'esm',
 			name: 'tti'
 		},
 		plugins: [
@@ -60,7 +71,12 @@ export default merge(
 				modulesOnly: true
 			}),
 			typescript({
-				tsconfig: './tsconfig.json'
+				useTsconfigDeclarationDir: true,
+				tsconfig: 'tsconfig.json',
+				tsconfigOverride: {
+					compilerOptions: { declarationDir: 'dist/types', outDir: 'dist', declaration: true }
+				},
+				exclude: ['test/**', 'node_modules/**']
 			}),
 			babel({
 				exclude: 'node_modules/**',
