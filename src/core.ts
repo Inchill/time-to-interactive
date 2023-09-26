@@ -47,12 +47,13 @@ export const onTTI = (onReport: TTIReportCallback) => {
 		entryTypes: ['paint', 'longtask', 'resource']
 	});
 
+	// TODO: If there is no loading event, checkQuietWindow would not be fired anyway.
 	window.addEventListener('load', () => {
 		const resourceEntries = performance.getEntriesByType('resource');
 		if (resourceEntries.length === 0) {
-			console.log('页面没有资源加载事件');
+			console.log('There is no loading event.');
 		} else {
-			console.log('页面有资源加载事件');
+			console.log('There is loading event.');
 		}
 	});
 
