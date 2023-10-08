@@ -4,8 +4,14 @@ Easily measure performance metrics of time to interactive in JavaScript.
 
 ## Usage
 
+**Install**
+
+```shell
+npm i @inchill/time-to-interactive
+```
+
 ```js
-import { onTTI } from 'tti';
+import { onTTI } from '@inchill/time-to-interactive';
 
 onTTI(res => console.log(res));
 ```
