@@ -1,6 +1,6 @@
 {
   "name": "@inchill/time-to-interactive",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Easily measure performance metrics of time to interactive in JavaScript.",
   "main": "dist/index.umd.js",
   "module": "dist/index.esm.js",
