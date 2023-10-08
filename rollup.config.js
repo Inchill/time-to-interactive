@@ -71,7 +71,7 @@ export default merge(
 				modulesOnly: true
 			}),
 			typescript({
-				useTsconfigDeclarationDir: true,
+				useTsconfigDeclarationDir: false,
 				tsconfig: 'tsconfig.json',
 				tsconfigOverride: {
 					compilerOptions: { declarationDir: 'dist/types', outDir: 'dist', declaration: true }
