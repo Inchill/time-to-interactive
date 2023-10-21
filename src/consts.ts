@@ -4,7 +4,7 @@
 export const ENTRY_NAME_FCP = 'first-contentful-paint';
 
 /**
- * Minimum quiet window duration(At least 5s).
+ * Minimum quiet window duration(At least 5 seconds).
  */
 export const QUIET_WINDOW_DURATION = 5000;
 

@@ -2,6 +2,7 @@ import { TTIReportCallback, TTIMetric } from '../types/index';
 import { ENTRY_NAME_FCP, QUIET_WINDOW_DURATION, RATING } from './consts';
 import { log } from './debug';
 import { initMetric, getRating, isSafari } from './tools';
+import { patchXMLHTTPRequest, patchFetch } from './patch-request';
 
 /**
  * Calculates the [TTI](https://web.dev/tti/) value for the current page and
@@ -17,7 +18,32 @@ export const onTTI = (onReport: TTIReportCallback) => {
 	const networks: TTIMetric['entry'][] = [];
 	let quietWindowTimer: number;
 	const metric = initMetric('TTI');
+	const inProgressRequestStartTimes = new Map();
 
+	/**
+   * Mark active network requests.
+   * @param requestId number
+   */
+	const beforeRequestCallback = (requestId) => {
+		inProgressRequestStartTimes.set(requestId, performance.now());
+	};
+
+	/**
+   * Remove finished network requests.
+   * @param requestId number
+   */
+	const afterRequestCallback = (requestId) => {
+		inProgressRequestStartTimes.delete(requestId);
+	};
+
+	// Patch XHR and Fetch API to detect in-flight network requests.
+	patchXMLHTTPRequest(beforeRequestCallback, afterRequestCallback);
+	patchFetch(beforeRequestCallback, afterRequestCallback);
+
+	/**
+   * Track longtask and networks and check quiet window.
+   * @param entries PerformanceObserverEntryList
+   */
 	const handleEntries = (entries: TTIMetric['entries']) => {
 		for (const entry of entries.getEntries()) {
 			if (entry.entryType === 'paint' && entry.name === ENTRY_NAME_FCP) {
@@ -27,13 +53,11 @@ export const onTTI = (onReport: TTIReportCallback) => {
 			// Longtasks could not be detected in Safari.
 			if (entry.entryType === 'longtask') {
 				longTasks.push(entry);
+				checkQuietWindow();
 			}
 
 			if (entry.entryType === 'resource') {
 				networks.push(entry);
-			}
-
-			if (['longtask', 'resource'].includes(entry.entryType)) {
 				checkQuietWindow();
 			}
 		}
@@ -45,16 +69,6 @@ export const onTTI = (onReport: TTIReportCallback) => {
 	const observer = new PerformanceObserver(handleEntries);
 	observer.observe({
 		entryTypes: ['paint', 'longtask', 'resource']
-	});
-
-	// TODO: If there is no loading event, checkQuietWindow would not be fired anyway.
-	window.addEventListener('load', () => {
-		const resourceEntries = performance.getEntriesByType('resource');
-		if (resourceEntries.length === 0) {
-			console.log('There is no loading event.');
-		} else {
-			console.log('There is loading event.');
-		}
 	});
 
 	// There are some cases need to be handled.
@@ -70,7 +84,7 @@ export const onTTI = (onReport: TTIReportCallback) => {
 		);
 
 		// If there are no longtasks after fcp, start the quiet window timer
-		// and count the number of network requests for at least 5 seconds.
+		// and count the number of in-flight network requests for at least 5 seconds.
 		if (longTasksAfterFcp.length === 0) {
 			startQuietWindowTimer(fcpStartTime);
 		} else {
@@ -90,33 +104,33 @@ export const onTTI = (onReport: TTIReportCallback) => {
 		clearQuietWindowTimer();
 
 		quietWindowTimer = window.setTimeout(() => {
-			// Count the number of network requests in 5 seconds.
-			const networksInQuietWindow = networks.filter(
-				(network) =>
-					network.startTime >= startTime &&
-          network.startTime <= startTime + QUIET_WINDOW_DURATION
-			);
-
-			// If the number of network requests is less than or equal to 2,
-			// find the nearest long task before the quiet window.
-			if (networksInQuietWindow.length <= 2) {
-				// If no longtask is found, the value of TTI is equal to FCP.
-				// If find the nearest long task before the quiet window, and
-				// its endTime is equal to TTI.
-				metric.value = startTime;
-
-				// Set the rating value based on the obtained tti time.
-				metric.rating = getRating(metric.value);
-
-				// Call the onReport callback if the quiet window was found.
-				onReport(metric);
-
-				// After reporting disconnect the PerformanceObserver.
-				observer.disconnect();
-				clearQuietWindowTimer();
-			}
+			checkTTI(startTime);
 		}, QUIET_WINDOW_DURATION);
 	}
+
+	const checkTTI = (startTime: number) => {
+		// Count the number of in-flight network requests in 5 seconds.
+		const inProgressRequestStarts = [...inProgressRequestStartTimes.values()];
+
+		// If the number of network requests is less than or equal to 2,
+		// find the nearest long task before the quiet window.
+		if (inProgressRequestStarts.length <= 2) {
+			// If no longtask is found, the value of TTI is equal to FCP.
+			// If find the nearest long task before the quiet window, and
+			// its endTime is equal to TTI.
+			metric.value = startTime;
+
+			// Set the rating value based on the obtained tti time.
+			metric.rating = getRating(metric.value);
+
+			// Call the onReport callback if the quiet window was found.
+			onReport(metric);
+
+			// After reporting disconnect the PerformanceObserver.
+			observer.disconnect();
+			clearQuietWindowTimer();
+		}
+	};
 
 	// Clear timer.
 	function clearQuietWindowTimer() {
